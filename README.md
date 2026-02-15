@@ -121,3 +121,5 @@ Deployed on **Streamlit Community Cloud**.
 - Matplotlib, Seaborn
 
 ---
+
+*BITS WILP — M.Tech (AIML/DSE) — Machine Learning — Assignment 2*
