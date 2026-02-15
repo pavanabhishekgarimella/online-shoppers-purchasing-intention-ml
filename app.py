@@ -251,7 +251,7 @@ def main():
         styled = comp_df.style.highlight_max(
             subset=['Accuracy','AUC','Precision','Recall','F1 Score','MCC'],color='#90EE90'
         ).format({'Accuracy':'{:.4f}','AUC':'{:.4f}','Precision':'{:.4f}','Recall':'{:.4f}','F1 Score':'{:.4f}','MCC':'{:.4f}'})
-        st.dataframe(styled,use_container_width=True,hide_index=True)
+        st.dataframe(styled,width="stretch",hide_index=True)
 
         st.subheader("Visual Comparison")
         fig = plot_metrics_comparison(active_results, title=f'Model Performance ({data_label})')
@@ -285,7 +285,7 @@ def main():
         if uploaded_df is not None and not upload_error:
             st.markdown("---")
             st.subheader("Uploaded Data Preview")
-            st.dataframe(uploaded_df.head(10),use_container_width=True)
+            st.dataframe(uploaded_df.head(10),width="stretch")
 
     # ─── Tab 3: Confusion Matrix & Report ─────────────────────────────────────
     with tab3:
@@ -309,7 +309,7 @@ def main():
                 'F1-Score':[report['0']['f1-score'],report['1']['f1-score'],report['macro avg']['f1-score'],report['weighted avg']['f1-score']],
                 'Support':[int(report['0']['support']),int(report['1']['support']),int(report['macro avg']['support']),int(report['weighted avg']['support'])]
             }).style.format({'Precision':'{:.4f}','Recall':'{:.4f}','F1-Score':'{:.4f}'})
-            st.dataframe(rdf,use_container_width=True,hide_index=True)
+            st.dataframe(rdf,width="stretch",hide_index=True)
 
     # ─── Tab 4: About ─────────────────────────────────────────────────────────
     with tab4:
