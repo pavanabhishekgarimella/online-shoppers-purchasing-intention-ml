@@ -310,10 +310,10 @@ def main():
 
     # ─── Tabs ─────────────────────────────────────────────────────────────────
     tab1, tab2, tab3, tab4 = st.tabs([
-        "📊 Model Comparison",
-        "🔬 Selected Model Details",
-        "📈 Uploaded Data Results",
-        "ℹ️ About"
+        " Model Comparison",
+        " Selected Model Details",
+        " Uploaded Data Results",
+        " About"
     ])
 
     # ─── Tab 1: Model Comparison ──────────────────────────────────────────────
@@ -357,11 +357,11 @@ def main():
 
         col1, col2 = st.columns(2)
         with col1:
-            st.success(f"🏆 **Best Accuracy:** {best_acc[0]} ({best_acc[1]['metrics']['Accuracy']:.4f})")
-            st.info(f"📈 **Best AUC:** {best_auc[0]} ({best_auc[1]['metrics']['AUC']:.4f})")
+            st.success(f" **Best Accuracy:** {best_acc[0]} ({best_acc[1]['metrics']['Accuracy']:.4f})")
+            st.info(f" **Best AUC:** {best_auc[0]} ({best_auc[1]['metrics']['AUC']:.4f})")
         with col2:
-            st.warning(f"⚡ **Best F1:** {best_f1[0]} ({best_f1[1]['metrics']['F1']:.4f})")
-            st.error(f"📊 **Best MCC:** {best_mcc[0]} ({best_mcc[1]['metrics']['MCC']:.4f})")
+            st.warning(f" **Best F1:** {best_f1[0]} ({best_f1[1]['metrics']['F1']:.4f})")
+            st.error(f" **Best MCC:** {best_mcc[0]} ({best_mcc[1]['metrics']['MCC']:.4f})")
 
     # ─── Tab 2: Selected Model Details ────────────────────────────────────────
     with tab2:
@@ -465,12 +465,12 @@ def main():
                     report_text = classification_report(y_true, y_pred, target_names=['No Purchase', 'Purchase'])
                     st.text(report_text)
                 else:
-                    st.info("💡 Include a 'Revenue' column in your CSV to see evaluation metrics.")
+                    st.info(" Include a 'Revenue' column in your CSV to see evaluation metrics.")
 
             except Exception as e:
                 st.error(f"Error processing uploaded file: {str(e)}")
         else:
-            st.info("👈 Upload a CSV file from the sidebar to see predictions and evaluation results here.")
+            st.info(" Upload a CSV file from the sidebar to see predictions and evaluation results here.")
             st.markdown("""
             **Instructions:**
             1. Select a model from the sidebar dropdown
