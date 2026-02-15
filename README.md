@@ -86,8 +86,8 @@ project-folder/
 
 ```bash
 # Clone the repository
-git clone <repo-url>
-cd <repo-name>
+git clone https://github.com/pavanabhishekgarimella/online-shoppers-purchasing-intention-ml.git
+cd online-shoppers-purchasing-intention-ml
 
 # Install dependencies
 pip install -r requirements.txt
@@ -124,4 +124,4 @@ Deployed on **Streamlit Community Cloud**.
 
 **Author:** Garimella Pavan Abhishek (2023DA04404)
 
-*BITS WILP — M.Tech (AIML/DSE) — Machine Learning — Assignment 2*
+*BITS WILP — M.Tech (DSE) — Machine Learning — Assignment 2*
