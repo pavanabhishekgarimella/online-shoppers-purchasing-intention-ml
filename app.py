@@ -235,7 +235,7 @@ def main():
         st.info("ℹ️ Showing results on default test split (2,466 samples). Upload a CSV from the sidebar to evaluate on your own data.")
 
     # ─── Tabs ─────────────────────────────────────────────────────────────────
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Model Comparison","🔬 Model Details","📋 Confusion Matrix & Report","ℹ️ About"])
+    tab1, tab2, tab3, tab4 = st.tabs([" Model Comparison"," Model Details"," Confusion Matrix & Report","ℹ️ About"])
 
     # ─── Tab 1: Comparison ────────────────────────────────────────────────────
     with tab1:
@@ -263,10 +263,10 @@ def main():
         best_f1 = max(active_results.items(),key=lambda x:x[1]['metrics']['F1'])
         best_mcc = max(active_results.items(),key=lambda x:x[1]['metrics']['MCC'])
         c1,c2 = st.columns(2)
-        c1.success(f"🏆 **Best Accuracy:** {best_acc[0]} ({best_acc[1]['metrics']['Accuracy']:.4f})")
-        c1.info(f"📈 **Best AUC:** {best_auc[0]} ({best_auc[1]['metrics']['AUC']:.4f})")
-        c2.warning(f"⚡ **Best F1:** {best_f1[0]} ({best_f1[1]['metrics']['F1']:.4f})")
-        c2.error(f"📊 **Best MCC:** {best_mcc[0]} ({best_mcc[1]['metrics']['MCC']:.4f})")
+        c1.success(f" **Best Accuracy:** {best_acc[0]} ({best_acc[1]['metrics']['Accuracy']:.4f})")
+        c1.info(f" **Best AUC:** {best_auc[0]} ({best_auc[1]['metrics']['AUC']:.4f})")
+        c2.warning(f" **Best F1:** {best_f1[0]} ({best_f1[1]['metrics']['F1']:.4f})")
+        c2.error(f" **Best MCC:** {best_mcc[0]} ({best_mcc[1]['metrics']['MCC']:.4f})")
 
     # ─── Tab 2: Selected Model Details ────────────────────────────────────────
     with tab2:
