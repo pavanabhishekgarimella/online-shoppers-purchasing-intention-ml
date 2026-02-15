@@ -109,7 +109,7 @@ streamlit run app.py
 
 Deployed on **Streamlit Community Cloud**.
 
-**Live App Link:** *(Add after deployment)*
+**Live App Link:** [https://online-shoppers-purchasing-intention-ml-fc7uxmkkylj4zep558ptne.streamlit.app/](https://online-shoppers-purchasing-intention-ml-fc7uxmkkylj4zep558ptne.streamlit.app/)
 
 ## Technologies Used
 
@@ -121,3 +121,7 @@ Deployed on **Streamlit Community Cloud**.
 - Matplotlib, Seaborn
 
 ---
+
+**Author:** Garimella Pavan Abhishek (2023DA04404)
+
+*BITS WILP — M.Tech (AIML/DSE) — Machine Learning — Assignment 2*
