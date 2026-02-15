@@ -223,8 +223,36 @@ def preprocess_uploaded_data(df, scaler, le_dict, feature_names):
     return df_scaled, y_true
 
 
+def evaluate_on_uploaded(trained_models, X_uploaded, y_true):
+    """Evaluate all models on uploaded data."""
+    upload_results = {}
+    for name, model in trained_models.items():
+        y_pred = model.predict(X_uploaded)
+        y_proba = model.predict_proba(X_uploaded)[:, 1]
+
+        metrics = {
+            'Accuracy': round(accuracy_score(y_true, y_pred), 4),
+            'AUC': round(roc_auc_score(y_true, y_proba), 4),
+            'Precision': round(precision_score(y_true, y_pred, zero_division=0), 4),
+            'Recall': round(recall_score(y_true, y_pred, zero_division=0), 4),
+            'F1': round(f1_score(y_true, y_pred, zero_division=0), 4),
+            'MCC': round(matthews_corrcoef(y_true, y_pred), 4)
+        }
+
+        cm = confusion_matrix(y_true, y_pred).tolist()
+        report = classification_report(y_true, y_pred, output_dict=True)
+
+        upload_results[name] = {
+            'metrics': metrics,
+            'confusion_matrix': cm,
+            'classification_report': report
+        }
+
+    return upload_results
+
+
 def plot_confusion_matrix(cm, model_name):
-    """Plot confusion matrix as a heatmap."""
+    """Plot confusion matrix."""
     fig, ax = plt.subplots(figsize=(6, 4))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax,
                 xticklabels=['No Purchase', 'Purchase'],
@@ -236,8 +264,8 @@ def plot_confusion_matrix(cm, model_name):
     return fig
 
 
-def plot_metrics_comparison(results):
-    """Plot comparison bar chart of all models."""
+def plot_metrics_comparison(results, title='Model Performance Comparison'):
+    """Plot comparison bar chart."""
     models = list(results.keys())
     metrics_list = ['Accuracy', 'AUC', 'Precision', 'Recall', 'F1', 'MCC']
 
@@ -252,7 +280,7 @@ def plot_metrics_comparison(results):
 
     ax.set_xlabel('Model', fontsize=12)
     ax.set_ylabel('Score', fontsize=12)
-    ax.set_title('Model Performance Comparison', fontsize=14, fontweight='bold')
+    ax.set_title(title, fontsize=14, fontweight='bold')
     ax.set_xticks(x + width * 2.5)
     ax.set_xticklabels(models, rotation=30, ha='right', fontsize=9)
     ax.legend(loc='upper right', fontsize=9)
@@ -260,6 +288,54 @@ def plot_metrics_comparison(results):
     ax.grid(axis='y', alpha=0.3)
     plt.tight_layout()
     return fig
+
+
+def display_model_details(results, selected_model):
+    """Display detailed metrics, confusion matrix, and classification report for selected model."""
+    model_result = results[selected_model]
+    metrics = model_result['metrics']
+
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1.metric("Accuracy", f"{metrics['Accuracy']:.4f}")
+    col2.metric("AUC", f"{metrics['AUC']:.4f}")
+    col3.metric("Precision", f"{metrics['Precision']:.4f}")
+    col4.metric("Recall", f"{metrics['Recall']:.4f}")
+    col5.metric("F1 Score", f"{metrics['F1']:.4f}")
+    col6.metric("MCC", f"{metrics['MCC']:.4f}")
+
+    col_left, col_right = st.columns(2)
+
+    with col_left:
+        st.subheader("Confusion Matrix")
+        cm = np.array(model_result['confusion_matrix'])
+        fig = plot_confusion_matrix(cm, selected_model)
+        st.pyplot(fig)
+
+    with col_right:
+        st.subheader("Classification Report")
+        report = model_result['classification_report']
+        report_df = pd.DataFrame({
+            'Class': ['No Purchase (0)', 'Purchase (1)', 'Macro Avg', 'Weighted Avg'],
+            'Precision': [
+                report['0']['precision'], report['1']['precision'],
+                report['macro avg']['precision'], report['weighted avg']['precision']
+            ],
+            'Recall': [
+                report['0']['recall'], report['1']['recall'],
+                report['macro avg']['recall'], report['weighted avg']['recall']
+            ],
+            'F1-Score': [
+                report['0']['f1-score'], report['1']['f1-score'],
+                report['macro avg']['f1-score'], report['weighted avg']['f1-score']
+            ],
+            'Support': [
+                int(report['0']['support']), int(report['1']['support']),
+                int(report['macro avg']['support']), int(report['weighted avg']['support'])
+            ]
+        }).style.format({
+            'Precision': '{:.4f}', 'Recall': '{:.4f}', 'F1-Score': '{:.4f}'
+        })
+        st.dataframe(report_df, use_container_width=True, hide_index=True)
 
 
 # ─── Main App ─────────────────────────────────────────────────────────────────
@@ -296,7 +372,7 @@ def main():
     uploaded_file = st.sidebar.file_uploader(
         "Upload CSV file (test data)",
         type=['csv'],
-        help="Upload test data CSV to evaluate the selected model. Include 'Revenue' column for evaluation metrics."
+        help="Upload a test CSV with 'Revenue' column to evaluate models on your data."
     )
 
     st.sidebar.markdown("---")
@@ -308,33 +384,41 @@ def main():
     **Task:** Binary Classification
     """)
 
+    # ─── Process uploaded file ────────────────────────────────────────────────
+    upload_results = None
+    uploaded_df = None
+
+    if uploaded_file is not None:
+        try:
+            uploaded_df = pd.read_csv(uploaded_file)
+            X_uploaded, y_true_upload = preprocess_uploaded_data(uploaded_df, scaler, le_dict, feature_names)
+
+            if y_true_upload is not None:
+                upload_results = evaluate_on_uploaded(trained_models, X_uploaded, y_true_upload)
+        except Exception as e:
+            st.error(f"Error processing uploaded file: {str(e)}")
+
     # ─── Tabs ─────────────────────────────────────────────────────────────────
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3 = st.tabs([
         "📊 Model Comparison",
-        "🔬 Selected Model Details",
         "📈 Uploaded Data Results",
         "ℹ️ About"
     ])
 
     # ─── Tab 1: Model Comparison ──────────────────────────────────────────────
     with tab1:
-        st.subheader("All Models — Evaluation Metrics Comparison")
+        st.subheader("All Models — Evaluation Metrics (Training/Test Split)")
 
         comparison_data = []
         for name, res in results.items():
             m = res['metrics']
             comparison_data.append({
-                'Model': name,
-                'Accuracy': m['Accuracy'],
-                'AUC': m['AUC'],
-                'Precision': m['Precision'],
-                'Recall': m['Recall'],
-                'F1 Score': m['F1'],
-                'MCC': m['MCC']
+                'Model': name, 'Accuracy': m['Accuracy'], 'AUC': m['AUC'],
+                'Precision': m['Precision'], 'Recall': m['Recall'],
+                'F1 Score': m['F1'], 'MCC': m['MCC']
             })
 
         comp_df = pd.DataFrame(comparison_data)
-
         styled_df = comp_df.style.highlight_max(
             subset=['Accuracy', 'AUC', 'Precision', 'Recall', 'F1 Score', 'MCC'],
             color='#90EE90'
@@ -342,13 +426,13 @@ def main():
             'Accuracy': '{:.4f}', 'AUC': '{:.4f}', 'Precision': '{:.4f}',
             'Recall': '{:.4f}', 'F1 Score': '{:.4f}', 'MCC': '{:.4f}'
         })
-
         st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
         st.subheader("Visual Comparison")
         fig = plot_metrics_comparison(results)
         st.pyplot(fig)
 
+        # Key observations
         st.subheader("Key Observations")
         best_acc = max(results.items(), key=lambda x: x[1]['metrics']['Accuracy'])
         best_auc = max(results.items(), key=lambda x: x[1]['metrics']['AUC'])
@@ -363,124 +447,77 @@ def main():
             st.warning(f"⚡ **Best F1:** {best_f1[0]} ({best_f1[1]['metrics']['F1']:.4f})")
             st.error(f"📊 **Best MCC:** {best_mcc[0]} ({best_mcc[1]['metrics']['MCC']:.4f})")
 
-    # ─── Tab 2: Selected Model Details ────────────────────────────────────────
-    with tab2:
-        st.subheader(f"Detailed Results: {selected_model}")
-
-        model_result = results[selected_model]
-        metrics = model_result['metrics']
-
-        col1, col2, col3, col4, col5, col6 = st.columns(6)
-        col1.metric("Accuracy", f"{metrics['Accuracy']:.4f}")
-        col2.metric("AUC", f"{metrics['AUC']:.4f}")
-        col3.metric("Precision", f"{metrics['Precision']:.4f}")
-        col4.metric("Recall", f"{metrics['Recall']:.4f}")
-        col5.metric("F1 Score", f"{metrics['F1']:.4f}")
-        col6.metric("MCC", f"{metrics['MCC']:.4f}")
-
+        # Selected model details
         st.markdown("---")
+        st.subheader(f"Selected Model Details: {selected_model}")
+        display_model_details(results, selected_model)
 
-        col_left, col_right = st.columns(2)
+    # ─── Tab 2: Uploaded Data Results ─────────────────────────────────────────
+    with tab2:
+        if uploaded_file is not None and uploaded_df is not None:
+            st.success(f"✅ Uploaded: **{uploaded_file.name}** — {uploaded_df.shape[0]} rows, {uploaded_df.shape[1]} columns")
 
-        with col_left:
-            st.subheader("Confusion Matrix")
-            cm = np.array(model_result['confusion_matrix'])
-            fig = plot_confusion_matrix(cm, selected_model)
-            st.pyplot(fig)
+            st.subheader("Uploaded Data Preview")
+            st.dataframe(uploaded_df.head(10), use_container_width=True)
 
-        with col_right:
-            st.subheader("Classification Report")
-            report = model_result['classification_report']
-            report_df = pd.DataFrame({
-                'Class': ['No Purchase (0)', 'Purchase (1)', 'Macro Avg', 'Weighted Avg'],
-                'Precision': [
-                    report['0']['precision'], report['1']['precision'],
-                    report['macro avg']['precision'], report['weighted avg']['precision']
-                ],
-                'Recall': [
-                    report['0']['recall'], report['1']['recall'],
-                    report['macro avg']['recall'], report['weighted avg']['recall']
-                ],
-                'F1-Score': [
-                    report['0']['f1-score'], report['1']['f1-score'],
-                    report['macro avg']['f1-score'], report['weighted avg']['f1-score']
-                ],
-                'Support': [
-                    int(report['0']['support']), int(report['1']['support']),
-                    int(report['macro avg']['support']), int(report['weighted avg']['support'])
-                ]
-            }).style.format({
-                'Precision': '{:.4f}', 'Recall': '{:.4f}', 'F1-Score': '{:.4f}'
-            })
-            st.dataframe(report_df, use_container_width=True, hide_index=True)
+            if upload_results is not None:
+                st.markdown("---")
+                st.subheader(f"All Models — Evaluation on Uploaded Data ({uploaded_df.shape[0]} samples)")
 
-    # ─── Tab 3: Uploaded Data Results ─────────────────────────────────────────
-    with tab3:
-        if uploaded_file is not None:
-            try:
-                uploaded_df = pd.read_csv(uploaded_file)
-                st.success(f"✅ Uploaded: {uploaded_file.name} ({uploaded_df.shape[0]} rows, {uploaded_df.shape[1]} columns)")
+                # Uploaded data comparison table
+                upload_comp = []
+                for name, res in upload_results.items():
+                    m = res['metrics']
+                    upload_comp.append({
+                        'Model': name, 'Accuracy': m['Accuracy'], 'AUC': m['AUC'],
+                        'Precision': m['Precision'], 'Recall': m['Recall'],
+                        'F1 Score': m['F1'], 'MCC': m['MCC']
+                    })
 
-                st.subheader("Data Preview")
-                st.dataframe(uploaded_df.head(10), use_container_width=True)
+                upload_df_styled = pd.DataFrame(upload_comp).style.highlight_max(
+                    subset=['Accuracy', 'AUC', 'Precision', 'Recall', 'F1 Score', 'MCC'],
+                    color='#90EE90'
+                ).format({
+                    'Accuracy': '{:.4f}', 'AUC': '{:.4f}', 'Precision': '{:.4f}',
+                    'Recall': '{:.4f}', 'F1 Score': '{:.4f}', 'MCC': '{:.4f}'
+                })
+                st.dataframe(upload_df_styled, use_container_width=True, hide_index=True)
 
-                model = trained_models[selected_model]
-                X_processed, y_true = preprocess_uploaded_data(uploaded_df, scaler, le_dict, feature_names)
+                # Bar chart for uploaded data
+                st.subheader("Visual Comparison (Uploaded Data)")
+                fig = plot_metrics_comparison(upload_results, title='Model Performance on Uploaded Data')
+                st.pyplot(fig)
 
-                y_pred = model.predict(X_processed)
-                y_proba = model.predict_proba(X_processed)[:, 1]
+                # Selected model details on uploaded data
+                st.markdown("---")
+                st.subheader(f"Selected Model Details: {selected_model} (Uploaded Data)")
+                display_model_details(upload_results, selected_model)
 
-                result_df = uploaded_df.copy()
-                result_df['Predicted'] = y_pred
-                result_df['Probability'] = np.round(y_proba, 4)
+            else:
+                st.warning("⚠️ No 'Revenue' column found. Include a 'Revenue' column (True/False or 1/0) for evaluation metrics.")
 
                 st.subheader(f"Predictions using {selected_model}")
-                st.dataframe(result_df.head(20), use_container_width=True)
-
-                if y_true is not None:
-                    st.subheader("Evaluation Metrics on Uploaded Data")
-
-                    eval_metrics = {
-                        'Accuracy': accuracy_score(y_true, y_pred),
-                        'AUC': roc_auc_score(y_true, y_proba),
-                        'Precision': precision_score(y_true, y_pred, zero_division=0),
-                        'Recall': recall_score(y_true, y_pred, zero_division=0),
-                        'F1': f1_score(y_true, y_pred, zero_division=0),
-                        'MCC': matthews_corrcoef(y_true, y_pred)
-                    }
-
-                    mc1, mc2, mc3, mc4, mc5, mc6 = st.columns(6)
-                    mc1.metric("Accuracy", f"{eval_metrics['Accuracy']:.4f}")
-                    mc2.metric("AUC", f"{eval_metrics['AUC']:.4f}")
-                    mc3.metric("Precision", f"{eval_metrics['Precision']:.4f}")
-                    mc4.metric("Recall", f"{eval_metrics['Recall']:.4f}")
-                    mc5.metric("F1 Score", f"{eval_metrics['F1']:.4f}")
-                    mc6.metric("MCC", f"{eval_metrics['MCC']:.4f}")
-
-                    cm_uploaded = confusion_matrix(y_true, y_pred)
-                    fig = plot_confusion_matrix(cm_uploaded, f"{selected_model} (Uploaded Data)")
-                    st.pyplot(fig)
-
-                    st.subheader("Classification Report")
-                    report_text = classification_report(y_true, y_pred, target_names=['No Purchase', 'Purchase'])
-                    st.text(report_text)
-                else:
-                    st.info("💡 Include a 'Revenue' column in your CSV to see evaluation metrics.")
-
-            except Exception as e:
-                st.error(f"Error processing uploaded file: {str(e)}")
+                model = trained_models[selected_model]
+                y_pred = model.predict(X_uploaded)
+                y_proba = model.predict_proba(X_uploaded)[:, 1]
+                pred_df = uploaded_df.copy()
+                pred_df['Predicted_Revenue'] = y_pred
+                pred_df['Purchase_Probability'] = np.round(y_proba, 4)
+                st.dataframe(pred_df, use_container_width=True)
         else:
-            st.info("👈 Upload a CSV file from the sidebar to see predictions and evaluation results here.")
+            st.info("👈 Upload a CSV file from the sidebar to evaluate models on your data.")
             st.markdown("""
-            **Instructions:**
-            1. Select a model from the sidebar dropdown
-            2. Upload a CSV test file (with the same feature columns as the training data)
-            3. Include a `Revenue` column (True/False or 1/0) to see evaluation metrics
-            4. Results will appear here automatically
+            **How to use:**
+            1. Download `test_data.csv` from the GitHub repository's `data/` folder
+            2. Upload it using the sidebar file uploader
+            3. The app will evaluate all 6 models on your uploaded data
+            4. Metrics, confusion matrix, and classification report will appear here
+            
+            **Note:** Include a `Revenue` column (True/False or 1/0) to see evaluation metrics.
             """)
 
-    # ─── Tab 4: About ─────────────────────────────────────────────────────────
-    with tab4:
+    # ─── Tab 3: About ─────────────────────────────────────────────────────────
+    with tab3:
         st.subheader("About This Project")
         st.markdown("""
         ### Problem Statement
